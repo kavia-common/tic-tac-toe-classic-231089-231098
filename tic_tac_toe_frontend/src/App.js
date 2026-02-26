@@ -1,47 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useMemo, useState } from "react";
+import "./App.css";
+import Board from "./components/Board";
+import { calculateWinner, isDraw } from "./utils/game";
+
+const INITIAL_SQUARES = Array(9).fill(null);
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  /** Main Tic Tac Toe app container. */
+  const [squares, setSquares] = useState(INITIAL_SQUARES);
+  const [xIsNext, setXIsNext] = useState(true);
 
-  // Effect to apply theme to document element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  const winnerInfo = useMemo(() => calculateWinner(squares), [squares]);
+  const draw = useMemo(() => isDraw(squares), [squares]);
+
+  const currentPlayer = xIsNext ? "X" : "O";
+  const gameOver = Boolean(winnerInfo.winner) || draw;
+
+  const statusText = winnerInfo.winner
+    ? `Winner: ${winnerInfo.winner}`
+    : draw
+      ? "Draw — no more moves!"
+      : `Turn: ${currentPlayer}`;
 
   // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  function handlePlay(index) {
+    /** Place current player's mark in the chosen square if allowed. */
+    if (gameOver) return;
+    if (squares[index] !== null) return;
+
+    const nextSquares = squares.slice();
+    nextSquares[index] = currentPlayer;
+
+    setSquares(nextSquares);
+    setXIsNext((prev) => !prev);
+  }
+
+  // PUBLIC_INTERFACE
+  function handleReset() {
+    /** Resets the game state to a new, empty board. */
+    setSquares(INITIAL_SQUARES);
+    setXIsNext(true);
+  }
 
   return (
     <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <main className="ttt-shell">
+        <header className="ttt-header">
+          <h1 className="ttt-title">Tic Tac Toe</h1>
+          <p className="ttt-subtitle">Local two-player • Retro classic</p>
+        </header>
+
+        <section className="ttt-panel" aria-label="Game panel">
+          <div
+            className={[
+              "ttt-status",
+              winnerInfo.winner ? "ttt-status--win" : "",
+              draw ? "ttt-status--draw" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            role="status"
+            aria-live="polite"
+            data-testid="status"
+          >
+            {statusText}
+          </div>
+
+          <Board
+            squares={squares}
+            onPlay={handlePlay}
+            disabled={gameOver}
+            winningLine={winnerInfo.line}
+          />
+
+          <div className="ttt-controls">
+            <button type="button" className="ttt-btn" onClick={handleReset}>
+              {gameOver ? "New Game" : "Reset"}
+            </button>
+          </div>
+        </section>
+
+        <footer className="ttt-footer">
+          <span className="ttt-hint">
+            Tip: First to connect three wins. Winning squares light up.
+          </span>
+        </footer>
+      </main>
     </div>
   );
 }
